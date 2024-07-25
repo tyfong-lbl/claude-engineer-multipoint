@@ -1,0 +1,12 @@
+
+# Virtual environment
+code_execution_env/
+
+# Log files 
+*.log
+
+# Chat Files
+Chat_*
+
+# Environment file
+.env
