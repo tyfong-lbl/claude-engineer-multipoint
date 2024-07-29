@@ -19,6 +19,9 @@ import aiohttp
 from prompt_toolkit import PromptSession
 from prompt_toolkit.styles import Style
 
+#Set max_tokens
+MAXTOKENS = 4096
+
 async def get_user_input(prompt="You: "):
     style = Style.from_dict({
         'prompt': 'cyan bold',
@@ -107,6 +110,8 @@ MAX_CONTEXT_TOKENS = 200000  # Reduced to 200k tokens for context window
 # Models
 # All models now use the same endpoint
 MODEL = "anthropic/claude-sonnet"
+TOOLCHECKERMODEL = MODEL
+
 
 # System prompts
 BASE_SYSTEM_PROMPT = """
@@ -353,7 +358,8 @@ async def generate_edit_instructions(file_path, file_content, instructions, proj
         # Make the API call to CODEEDITORMODEL (context is not maintained except for code_editor_memory)
         response = client.chat.completions.create(
             model=MODEL,
-            max_tokens=8000,
+            #max_tokens=8000,
+            max_tokens=MAXTOKENS,
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": "Generate SEARCH/REPLACE blocks for the necessary changes."}
@@ -741,6 +747,21 @@ tools = [
     }
 ]
 
+updated_tools = []
+
+for tool in tools:
+    updated_tool = { 
+        "type": "function",
+        "function": {
+            "name": tool["name"],
+            "description": tool["description"],
+            "parameters": tool["input_schema"]
+        }   
+    }   
+    updated_tools.append(updated_tool)
+
+tools = updated_tools
+
 from typing import Dict, Any
 
 async def execute_tool(tool_name: str, tool_input: Dict[str, Any]) -> Dict[str, Any]:
@@ -852,11 +873,12 @@ async def send_to_ai_for_executing(code, execution_result):
 
         response = client.chat.completions.create(
             model=MODEL,
-            max_tokens=2000,
+            temperature=0.0,
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": f"Analyze this code execution from the 'code_execution_env' virtual environment:\n\nCode:\n{code}\n\nExecution Result:\n{execution_result}"}
-            ]
+            ],
+            tools=[]
         )
 
         # Update token usage for code execution
@@ -967,7 +989,7 @@ async def chat_with_claude(user_input, image_path=None, current_iteration=None, 
         # MAINMODEL call, which maintains context
         response = client.chat.completions.create(
             model=MODEL,
-            max_tokens=8000,
+            max_tokens=3500,
             messages=[{"role": "system", "content": update_system_prompt(current_iteration, max_iterations)}] + messages,
             tools=tools,
             tool_choice="auto"
@@ -1006,9 +1028,9 @@ async def chat_with_claude(user_input, image_path=None, current_iteration=None, 
     console.print(Panel(files_in_context, title="Files in Context", title_align="left", border_style="white", expand=False))
 
     for tool_use in tool_uses:
-        tool_name = tool_use.name
-        tool_input = tool_use.input
-        tool_use_id = tool_use.id
+        tool_name = tool_use.function.name if hasattr(tool_use, 'function') else tool_use.type
+        tool_input = json.loads(tool_use.function.arguments) if hasattr(tool_use, 'function') else {}
+        tool_use_id = tool_use.id if hasattr(tool_use, 'id') else 'unknown_id'
 
         console.print(Panel(f"Tool Used: {tool_name}", style="green"))
         console.print(Panel(f"Tool Input: {json.dumps(tool_input, indent=2)}", style="green"))
@@ -1057,25 +1079,35 @@ async def chat_with_claude(user_input, image_path=None, current_iteration=None, 
         messages = filtered_conversation_history + current_conversation
 
         try:
-            tool_response = client.messages.create(
+            tool_response = client.chat.completions.create(
                 model=TOOLCHECKERMODEL,
-                max_tokens=8000,
-                system=update_system_prompt(current_iteration, max_iterations),
-                extra_headers={"anthropic-beta": "max-tokens-3-5-sonnet-2024-07-15"},
-                messages=messages,
+                #max_tokens=8000,
+                max_tokens=MAXTOKENS,
+                #system=update_system_prompt(current_iteration, max_iterations),
+                #extra_headers={"anthropic-beta": "max-tokens-3-5-sonnet-2024-07-15"},
+                messages=[
+                          {"role":"system", "content":update_system_prompt(current_iteration, max_iterations)},
+                          {"role":"user", "content": user_input}] + messages,
                 tools=tools,
-                tool_choice={"type": "auto"}
+                tool_choice="auto"
             )
             # Update token usage for tool checker
-            tool_checker_tokens['input'] += tool_response.usage.input_tokens
-            tool_checker_tokens['output'] += tool_response.usage.output_tokens
+            tool_checker_tokens['input'] += tool_response.usage.prompt_tokens
+            tool_checker_tokens['output'] += tool_response.usage.completion_tokens
 
-            tool_checker_response = ""
-            for tool_content_block in tool_response.content:
-                if tool_content_block.type == "text":
-                    tool_checker_response += tool_content_block.text
-            console.print(Panel(Markdown(tool_checker_response), title="Claude's Response to Tool Result",  title_align="left", border_style="blue", expand=False))
-            assistant_response += "\n\n" + tool_checker_response
+#            tool_checker_response = ""
+#            for tool_content_block in tool_response.content:
+#                if tool_content_block.type == "text":
+#                    tool_checker_response += tool_content_block.text
+#            console.print(Panel(Markdown(tool_checker_response), title="Claude's Response to Tool Result",  title_align="left", border_style="blue", expand=False))
+#            assistant_response += "\n\n" + tool_checker_response
+            tool_checker_response = tool_response.choices[0].message.content
+            console.print(Panel(Markdown(tool_checker_response), 
+                                title="Claude's Response to Tool Result",
+                                title_align="left", 
+                                border_style="blue",
+                                expand=False))
+            assistant_response += f"\n\n {tool_checker_response}" 
         except APIError as e:
             error_message = f"Error in tool response: {str(e)}"
             console.print(Panel(error_message, title="Error", style="bold red"))
