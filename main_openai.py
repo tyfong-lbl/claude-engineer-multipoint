@@ -20,7 +20,7 @@ from prompt_toolkit import PromptSession
 from prompt_toolkit.styles import Style
 
 #Set max_tokens
-MAXTOKENS = 4096
+MAXTOKENS =  4096 
 
 async def get_user_input(prompt="You: "):
     style = Style.from_dict({
@@ -64,7 +64,9 @@ load_dotenv()
 openai_api_key = os.getenv("CYCLOGPT_API_KEY")
 if not openai_api_key:
     raise ValueError("CYCLOGPT_API_KEY not found in environment variables")
-client = OpenAI(api_key=openai_api_key, base_url="https://api.cborg.lbl.gov")
+#base_url = "https://api.cborg.lbl.gov"
+base_url = "https://api-local.cborg.lbl.gov/"
+client = OpenAI(api_key=openai_api_key, base_url=base_url)
 
 # Initialize the Tavily client
 tavily_api_key = os.getenv("TAVILY_API_KEY")
@@ -110,6 +112,7 @@ MAX_CONTEXT_TOKENS = 200000  # Reduced to 200k tokens for context window
 # Models
 # All models now use the same endpoint
 MODEL = "anthropic/claude-sonnet"
+#MODEL = "lbl/llama-3"
 TOOLCHECKERMODEL = MODEL
 
 
