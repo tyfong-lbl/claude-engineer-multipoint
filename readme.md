@@ -1,6 +1,9 @@
-# 🤖 Claude Engineer
+# 🤖 Claude Engineer Multipoint
 
-Claude Engineer is an advanced interactive command-line interface (CLI) that harnesses the power of Anthropic's Claude 3 and Claude 3.5 models to assist with a wide range of software development tasks. This tool seamlessly combines the capabilities of state-of-the-art large language models with practical file system operations, web search functionality, intelligent code analysis, and execution capabilities.
+Claude Engineer Multipoint is a fork of Claude Engineer. The fork is a refactor to allow the use of an OpenAI type endpoint with API key for access to Anthropic Claude 3.5. The default settings for the API endpoint is for the CBORG service at LBNL. 
+
+
+This is an advanced interactive command-line interface (CLI) that harnesses the power of Anthropic's Claude 3 and Claude 3.5 models to assist with a wide range of software development tasks. This tool seamlessly combines the capabilities of state-of-the-art large language models with practical file system operations, web search functionality, intelligent code analysis, and execution capabilities.
 
 ## ✨ Features
 
@@ -33,8 +36,8 @@ Claude Engineer is an advanced interactive command-line interface (CLI) that har
 
 1. Clone this repository:
    ```
-   git clone https://github.com/doriandarko/claude-engineer.git
-   cd claude-engineer
+   git clone https://github.com/tyfong-lbl/claude-engineer-multipoint.git 
+   cd claude-engineer-multipoint
    ```
 
 2. Install the required dependencies:
@@ -42,13 +45,19 @@ Claude Engineer is an advanced interactive command-line interface (CLI) that har
    pip install -r requirements.txt
    ```
 
-3. Set up your environment variables:
+3. Set up your environment variables and API endpoint:
    - Create a `.env` file in the project root directory
+   - Make sure that you add the .env file to your `.gitignore` file, to protect yourself against uploading your credential to github.  
    - Add the following environment variables:
      ```
-     ANTHROPIC_API_KEY=your_anthropic_api_key
      TAVILY_API_KEY=your_tavily_api_key
      ```
+   - For LBNL users, reach out to scienceit@lbl.gov to get your CBORG API Key.
+   - Set the environment variable, `CYCLOGPT_API_KEY` to the API key you receive from ScienceIT, either by placing it in the `.env` file, or by calling a script from your shell configuration file(s). 
+   - If you are using a non LBNL endpoint, search `main_openai.py` for `CYCLOGPT_API_KEY` and replace with your environment variable of choice.
+   - Similarly, if you are using a non LBNL endpoint, search `main_openai.py` for `https://api.cborg.lbl.gov` and replace the URL with your desired endpoint.
+   - For LBNL users, ensure that you are either on VPN or on the lab network, otherwise you will not be able to access the CBORG endpoint. 
+   
 
 4. Set up the virtual environment for code execution:
    Engineer will create a virtual environment to run code the first time it executes a piece of code.
@@ -96,7 +105,7 @@ The code_execution_env virtual environment will be used for all code execution t
 Run the main script to start the Claude Engineer interface:
 
 ```
-python main.py
+python main_openai.py
 ```
 
 Once started, you can interact with Claude Engineer by typing your queries or commands. Some example interactions:
@@ -342,4 +351,4 @@ Contributions are welcome! Please feel free to submit a Pull Request. For major 
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=Doriandarko/claude-engineer&type=Date)](https://star-history.com/#Doriandarko/claude-engineer&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=tyfong-lbl/claude-engineer-multipoint&type=Date)](https://star-history.com/#tyfong-lbl/claude-engineer-multipoint&Date)
