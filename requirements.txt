@@ -2,7 +2,10 @@ anthropic
 python-dotenv
 tavily-python
 Pillow
+anthropic
 rich
-aiohttp
 prompt_toolkit
 openai>=1.37.1
+pydub
+websockets
+SpeechRecognition
