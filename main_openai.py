@@ -876,7 +876,7 @@ async def send_to_ai_for_executing(code, execution_result):
 
         response = client.chat.completions.create(
             model=MODEL,
-            temperature=0.0,
+            temperature=0.1,
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": f"Analyze this code execution from the 'code_execution_env' virtual environment:\n\nCode:\n{code}\n\nExecution Result:\n{execution_result}"}
