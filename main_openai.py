@@ -327,7 +327,6 @@ CONTINUATION_EXIT_PHRASE = "AUTOMODE_COMPLETE"
 MAX_CONTINUATION_ITERATIONS = 25
 MAX_CONTEXT_TOKENS = 200000  # Reduced to 200k tokens for context window
 
-<<<<<<< HEAD:main_openai.py
 # Models
 # All models now use the same endpoint
 MODEL = "anthropic/claude-sonnet"
@@ -725,24 +724,11 @@ async def generate_edit_instructions(file_path, file_content, instructions, proj
         IMPORTANT: ONLY RETURN CODE INSIDE THE <SEARCH> AND <REPLACE> TAGS. ONLY RETURN THE CODE OTHERWISE THE EDIT WILL NOT BE APPLIED AND YOU WILL BE FIRED.
         """
 
-<<<<<<< HEAD:main_openai.py
         # Make the API call to CODEEDITORMODEL (context is not maintained except for code_editor_memory)
         response = client.chat.completions.create(
             model=MODEL,
             #max_tokens=8000,
             max_tokens=MAXTOKENS,
-=======
-        response = client.beta.prompt_caching.messages.create(
-            model=CODEEDITORMODEL,
-            max_tokens=8000,
-            system=[
-                {
-                    "type": "text",
-                    "text": system_prompt,
-                    "cache_control": {"type": "ephemeral"}
-                }
-            ],
->>>>>>> upstream/main:main.py
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": "Generate SEARCH/REPLACE blocks for the necessary changes."}
@@ -751,22 +737,13 @@ async def generate_edit_instructions(file_path, file_content, instructions, proj
         )
 
         # Update token usage for code editor
-<<<<<<< HEAD:main_openai.py
         code_editor_tokens['input'] += response.usage.prompt_tokens
         code_editor_tokens['output'] += response.usage.completion_tokens
 
         # Parse the response to extract SEARCH/REPLACE blocks
         edit_instructions = parse_search_replace_blocks(response.choices[0].message.content)
 
-        # Update code editor memory (this is the only part that maintains some context between calls)
-        code_editor_memory.append(f"Edit Instructions for {file_path}:\n{response.choices[0].message.content}")
-=======
-        code_editor_tokens['input'] += response.usage.input_tokens
-        code_editor_tokens['output'] += response.usage.output_tokens
-        code_editor_tokens['cache_creation'] = response.usage.cache_creation_input_tokens
-        code_editor_tokens['cache_read'] = response.usage.cache_read_input_tokens
-
-        ai_response_text = response.content[0].text
+        ai_response_text = response.choices[0].message.content
 
         # Validate AI response
         if not validate_ai_response(ai_response_text):
@@ -780,7 +757,6 @@ async def generate_edit_instructions(file_path, file_content, instructions, proj
 
         # Update code editor memory
         code_editor_memory.append(f"Edit Instructions for {file_path}:\n{ai_response_text}")
->>>>>>> upstream/main:main.py
 
         # Add the file to code_editor_files set
         code_editor_files.add(file_path)
@@ -1381,7 +1357,6 @@ tools = [
     }
 ]
 
-<<<<<<< HEAD:main_openai.py
 updated_tools = []
 
 for tool in tools:
@@ -1398,7 +1373,6 @@ for tool in tools:
 tools = updated_tools
 
 from typing import Dict, Any
-=======
 
 
 async def decide_retry(tool_checker_response, edit_results):
@@ -1446,7 +1420,6 @@ Only return the JSON object, nothing else. Ensure that the JSON is properly form
     except Exception as e:
         console.print(Panel(f"Error in decide_retry: {str(e)}", title="Error", style="bold red"))
         return {"retry": False, "files_to_retry": []}
->>>>>>> upstream/main:main.py
 
 async def execute_tool(tool_name: str, tool_input: Dict[str, Any]) -> Dict[str, Any]:
     try:
@@ -1622,45 +1595,22 @@ async def send_to_ai_for_executing(code, execution_result):
         IMPORTANT: PROVIDE ONLY YOUR ANALYSIS AND OBSERVATIONS. DO NOT INCLUDE ANY PREFACING STATEMENTS OR EXPLANATIONS OF YOUR ROLE.
         """
 
-<<<<<<< HEAD:main_openai.py
         response = client.chat.completions.create(
             model=MODEL,
             temperature=0.0,
-=======
-        response = client.beta.prompt_caching.messages.create(
-            model=CODEEXECUTIONMODEL,
-            max_tokens=2000,
-            system=[
-                {
-                    "type": "text",
-                    "text": system_prompt,
-                    "cache_control": {"type": "ephemeral"}
-                }
-            ],
->>>>>>> upstream/main:main.py
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": f"Analyze this code execution from the 'code_execution_env' virtual environment:\n\nCode:\n{code}\n\nExecution Result:\n{execution_result}"}
             ],
-<<<<<<< HEAD:main_openai.py
             tools=[]
         )
 
         # Update token usage for code execution
         code_execution_tokens['input'] += response.usage.prompt_tokens
         code_execution_tokens['output'] += response.usage.completion_tokens
-=======
-            extra_headers={"anthropic-beta": "prompt-caching-2024-07-31"}
-        )
 
-        # Update token usage for code execution
-        code_execution_tokens['input'] += response.usage.input_tokens
-        code_execution_tokens['output'] += response.usage.output_tokens
-        code_execution_tokens['cache_creation'] = response.usage.cache_creation_input_tokens
-        code_execution_tokens['cache_read'] = response.usage.cache_read_input_tokens
->>>>>>> upstream/main:main.py
 
-        analysis = response.choices[0].message.content
+        analysis = response.choices[0].message.content if response.choices[0].message.content else "\""
 
         return analysis
 
@@ -1769,7 +1719,6 @@ async def chat_with_claude(user_input, image_path=None, current_iteration=None, 
     # Combine filtered history with current conversation to maintain context
     messages = filtered_conversation_history + current_conversation
 
-<<<<<<< HEAD:main_openai.py
     try:
         # MAINMODEL call, which maintains context
         response = client.chat.completions.create(
@@ -1790,58 +1739,13 @@ async def chat_with_claude(user_input, image_path=None, current_iteration=None, 
         else:
             console.print(Panel(f"API Error: {str(e)}", title="API Error", style="bold red"))
             return "I'm sorry, there was an error communicating with the AI. Please try again.", False
-=======
-    max_retries = 3
-    retry_delay = 5
 
-    for attempt in range(max_retries):
-        try:
-            # MAINMODEL call with prompt caching
-            response = client.beta.prompt_caching.messages.create(
-                model=MAINMODEL,
-                max_tokens=8000,
-                system=[
-                    {
-                        "type": "text",
-                        "text": update_system_prompt(current_iteration, max_iterations),
-                        "cache_control": {"type": "ephemeral"}
-                    },
-                    {
-                        "type": "text",
-                        "text": json.dumps(tools),
-                        "cache_control": {"type": "ephemeral"}
-                    }
-                ],
-                messages=messages,
-                tools=tools,
-                tool_choice={"type": "auto"},
-                extra_headers={"anthropic-beta": "prompt-caching-2024-07-31"}
-            )
-            # Update token usage for MAINMODEL
-            main_model_tokens['input'] += response.usage.input_tokens
-            main_model_tokens['output'] += response.usage.output_tokens
-            main_model_tokens['cache_write'] = response.usage.cache_creation_input_tokens
-            main_model_tokens['cache_read'] = response.usage.cache_read_input_tokens
-            break  # If successful, break out of the retry loop
-        except APIStatusError as e:
-            if e.status_code == 429 and attempt < max_retries - 1:
-                console.print(Panel(f"Rate limit exceeded. Retrying in {retry_delay} seconds... (Attempt {attempt + 1}/{max_retries})", title="API Error", style="bold yellow"))
-                time.sleep(retry_delay)
-                retry_delay *= 2  # Exponential backoff
-            else:
-                console.print(Panel(f"API Error: {str(e)}", title="API Error", style="bold red"))
-                return "I'm sorry, there was an error communicating with the AI. Please try again.", False
-        except APIError as e:
-            console.print(Panel(f"API Error: {str(e)}", title="API Error", style="bold red"))
-            return "I'm sorry, there was an error communicating with the AI. Please try again.", False
+    assistant_response = response.choices[0].message.content 
+    exit_continuation = CONTINUATION_EXIT_PHRASE in assistant_response 
+    if hasattr(response.choices[0].message, 'tool_calls') and response.choices[0].message.tool_calls:
+        tool_uses = response.choices[0].message.tool_calls
     else:
-        console.print(Panel("Max retries reached. Unable to communicate with the AI.", title="Error", style="bold red"))
-        return "I'm sorry, there was a persistent error communicating with the AI. Please try again later.", False
->>>>>>> upstream/main:main.py
-
-    assistant_response = ""
-    exit_continuation = False
-    tool_uses = []
+        tool_uses = []
 
     for choice in response.choices:
         if choice.message.content:
@@ -1947,25 +1851,16 @@ async def chat_with_claude(user_input, image_path=None, current_iteration=None, 
             tool_checker_tokens['input'] += tool_response.usage.prompt_tokens
             tool_checker_tokens['output'] += tool_response.usage.completion_tokens
 
-<<<<<<< HEAD:main_openai.py
-#            tool_checker_response = ""
-#            for tool_content_block in tool_response.content:
-#                if tool_content_block.type == "text":
-#                    tool_checker_response += tool_content_block.text
-#            console.print(Panel(Markdown(tool_checker_response), title="Claude's Response to Tool Result",  title_align="left", border_style="blue", expand=False))
-#            assistant_response += "\n\n" + tool_checker_response
-            tool_checker_response = tool_response.choices[0].message.content
-            console.print(Panel(Markdown(tool_checker_response), 
-                                title="Claude's Response to Tool Result",
-                                title_align="left", 
-                                border_style="blue",
-                                expand=False))
-            assistant_response += f"\n\n {tool_checker_response}" 
-=======
-            tool_checker_response = ""
-            for tool_content_block in tool_response.content:
-                if tool_content_block.type == "text":
-                    tool_checker_response += tool_content_block.text
+            tool_checker_response = tool_response.choices[0].message.content 
+            if tool_response.choices[0].message.tool_calls:
+                for tool_call in tool_response.choices[0].message.tool_calls:
+                    tool_checker_response += f"\n\nTool Call:{tool_call.function.name}\n"
+                    tool_checker_response += f"Arguments: {tool_call.function.arguments}\n" 
+
+
+            #for tool_content_block in tool_response.content:
+            #    if tool_content_block.type == "text":
+            #        tool_checker_response += tool_content_block.text
             console.print(Panel(Markdown(tool_checker_response), title="Claude's Response to Tool Result",  title_align="left", border_style="blue", expand=False))
             if use_tts:
                 await text_to_speech(tool_checker_response)
@@ -1983,7 +1878,6 @@ async def chat_with_claude(user_input, image_path=None, current_iteration=None, 
                 else:
                     console.print(Panel("Claude has decided not to retry editing", style="green"))
 
->>>>>>> upstream/main:main.py
         except APIError as e:
             error_message = f"Error in tool response: {str(e)}"
             console.print(Panel(error_message, title="Error", style="bold red"))
@@ -2053,8 +1947,10 @@ def display_token_usage():
                           ("Code Execution", code_execution_tokens)]:
         input_tokens = tokens['input']
         output_tokens = tokens['output']
-        cache_write_tokens = tokens['cache_write']
-        cache_read_tokens = tokens['cache_read']
+        print(tokens)
+        #cache_write_tokens = tokens['cache_write']
+        cache_write_tokens = tokens.get('cache_write', 0)
+        cache_read_tokens = tokens.get('cache_read',0)
         total_tokens = input_tokens + output_tokens + cache_write_tokens + cache_read_tokens
 
         total_input += input_tokens
@@ -2064,7 +1960,7 @@ def display_token_usage():
 
         input_cost = (input_tokens / 1_000_000) * model_costs[model]["input"]
         output_cost = (output_tokens / 1_000_000) * model_costs[model]["output"]
-        cache_write_cost = (cache_write_tokens / 1_000_000) * model_costs[model]["cache_write"]
+        cache_write_cost = (cache_write_tokens / 1_000_000) * model_costs[model].get("cache_write", 0)
         cache_read_cost = (cache_read_tokens / 1_000_000) * model_costs[model]["cache_read"]
         model_cost = input_cost + output_cost + cache_write_cost + cache_read_cost
         total_cost += model_cost

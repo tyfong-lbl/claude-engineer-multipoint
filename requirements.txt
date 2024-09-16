@@ -7,5 +7,6 @@ rich
 prompt_toolkit
 openai>=1.37.1
 pydub
+pyaudio
 websockets
 SpeechRecognition
