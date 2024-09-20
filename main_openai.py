@@ -35,7 +35,13 @@ import shutil
 from typing import AsyncIterable
 
 # Configure logging
-logging.basicConfig(level=logging.ERROR, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(level=logging.ERROR, 
+                    format='%(asctime)s - %(levelname)s - %(message)s',
+                    handlers=[
+                        logging.FileHandler("debug.log", mode='a'),
+                        logging.StreamHandler()                    
+                    ])
+logging.info("-----------------------New Run Started -------------------------")
 
 # Load environment variables from .env file
 load_dotenv()
@@ -62,6 +68,28 @@ ELEVEN_LABS_API_KEY = os.getenv('ELEVEN_LABS_API_KEY')
 VOICE_ID = 'YOUR VOICE ID'
 MODEL_ID = 'eleven_turbo_v2_5'
 
+def validate_files_structure(files):
+    logging.debug(f"validate_files_structure input: {files}")
+    if not isinstance(files, (dict, list)):
+        logging.error(f"Invalid 'files' structure. Expected a dictionary or a list of dictionaries. Got: {type(files)}")
+        raise ValueError("Invalid 'files' structure. Expected a dictionary or a list of dictionaries.")
+    
+    if isinstance(files, dict):
+        files = [files]
+    
+    for file in files:
+        if not isinstance(file, dict):
+            logging.error(f"Each file must be a dictionary. Got: {type(file)}")
+            raise ValueError("Each file must be a dictionary.")
+        if 'path' not in file or 'content' not in file:
+            logging.error(f"Each file dictionary must contain 'path' and 'content' keys. Keys found: {file.keys()}")
+            raise ValueError("Each file dictionary must contain 'path' and 'content' keys.")
+        if not isinstance(file['path'], str) or not isinstance(file['content'], str):
+            logging.error(f"'path' and 'content' must be strings. Types found: path: {type(file['path'])}, content: {type(file['content'])}")
+            raise ValueError("'path' and 'content' must be strings.")
+
+    return files
+    
 def is_installed(lib_name):
     return shutil.which(lib_name) is not None
 
@@ -572,17 +600,14 @@ def create_folders(paths):
 def create_files(files):
     global file_contents
     results = []
-    
-    # Handle different input types
-    if isinstance(files, str):
-        # If a string is passed, assume it's a single file path
-        files = [{"path": files, "content": ""}]
-    elif isinstance(files, dict):
-        # If a single dictionary is passed, wrap it in a list
-        files = [files]
-    elif not isinstance(files, list):
-        return "Error: Invalid input type for create_files. Expected string, dict, or list."
-    
+    logging.debug(f"create_files input: {files}")
+    try:
+        files = validate_files_structure(files) 
+    except ValueError as e:
+        error_message = f"Error in validate_files_structure: {str(e)}"
+        logging.error(f"{error_message}. Input: {files}")
+        return error_message
+
     for file in files:
         try:
             if not isinstance(file, dict):
@@ -591,7 +616,7 @@ def create_files(files):
             
             path = file.get('path')
             content = file.get('content', '')
-            
+            logging.debug(f"Creating file: {path}") 
             if path is None:
                 results.append(f"Error: Missing 'path' for file")
                 continue
@@ -606,7 +631,9 @@ def create_files(files):
             file_contents[path] = content
             results.append(f"File created and added to system prompt: {path}")
         except Exception as e:
-            results.append(f"Error creating file: {str(e)}")
+            error_msg = f"Error creating file: {str(e)}"
+            logging.error(error_msg)
+            results.append(error_msg)
     
     return "\n".join(results)
 
@@ -1428,10 +1455,12 @@ async def execute_tool(tool_name: str, tool_input: Dict[str, Any]) -> Dict[str, 
         console_output = None
 
         if tool_name == "create_files":
-            if isinstance(tool_input, dict) and 'files' in tool_input:
-                files = tool_input['files']
-            else:
-                files = tool_input
+            files_input = tool_input.get('files', tool_input)
+            if isinstance(files_input, str):
+                files_input = [{'path': files_input, 'content': ''}]
+            elif isinstance(files_input, dict) and 'path' in files_input:
+                files_input = [files_input]
+            files = validate_files_structure(files_input)
             result = create_files(files)
         elif tool_name == "edit_and_apply_multiple":
             files = tool_input.get("files", [tool_input])
@@ -1776,7 +1805,14 @@ async def chat_with_claude(user_input, image_path=None, current_iteration=None, 
         console.print(Panel(f"Tool Input: {json.dumps(tool_input, indent=2)}", style="green"))
 
         if tool_name == 'create_files':
-            tool_result = create_files(tool_input.get('files', [tool_input]))
+            logging.debug(f"create_files tool input:{tool_input}")
+            try:
+                files_input = tool_input.get('files', [tool_input]) 
+                tool_result = create_files(files_input)
+            except Exception as e:
+                error_message = f"Error in create_files: {str(e)}"
+                logging.error(f"{error_message}. Input: {tool_input}")
+                tool_result = {"is_error": True, "content": error_message}
         else:
             tool_result = await execute_tool(tool_name, tool_input)
 
@@ -2167,31 +2203,9 @@ async def main():
         else:
             response, _ = await chat_with_claude(user_input)
 
-def validate_files_structure(files):
-    if not isinstance(files, (dict, list)):
-        raise ValueError("Invalid 'files' structure. Expected a dictionary or a list of dictionaries.")
-    
-    if isinstance(files, dict):
-        files = [files]
-    
-    for file in files:
-        if not isinstance(file, dict):
-            raise ValueError("Each file must be a dictionary.")
-        if 'path' not in file or 'instructions' not in file:
-            raise ValueError("Each file dictionary must contain 'path' and 'instructions' keys.")
-        if not isinstance(file['path'], str) or not isinstance(file['instructions'], str):
-            raise ValueError("'path' and 'instructions' must be strings.")
-
-    return files
-
-
-
-    # Add more tests for other functions as needed
+# Add more tests for other functions as needed
 
 if __name__ == "__main__":
-
-
-    # Run the main program
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
