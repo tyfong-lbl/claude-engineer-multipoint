@@ -69,7 +69,6 @@ VOICE_ID = 'YOUR VOICE ID'
 MODEL_ID = 'eleven_turbo_v2_5'
 
 def validate_files_structure(files):
-    breakpoint()
     logging.debug(f"validate_files_structure input: {files}")
     if not isinstance(files, (dict, list)):
         logging.error(f"Invalid 'files' structure. Expected a dictionary or a list of dictionaries. Got: {type(files)}")
@@ -599,7 +598,6 @@ def create_folders(paths):
     return "\n".join(results)
 
 def create_files(files):
-    breakpoint()
     global file_contents
     results = []
     logging.debug(f"create_files input: {files}")
@@ -2205,32 +2203,7 @@ async def main():
         else:
             response, _ = await chat_with_claude(user_input)
 
-#def validate_files_structure(files):
-#    breakpoint()
-#    logging.debug(f"validate_files_structure input: {files}")
-#    if not isinstance(files, (dict, list)):
-#        logging.error(f"Invalid 'files' structure. Expected a dictionary or a list of dictionaries. Got: {type(files)}")
-#        raise ValueError("Invalid 'files' structure. Expected a dictionary or a list of dictionaries.")
-#    
-#    if isinstance(files, dict):
-#        files = [files]
-#    
-#    for file in files:
-#        if not isinstance(file, dict):
-#            logging.error(f"Each file must be a dictionary. Got: {type(file)}")
-#            raise ValueError("Each file must be a dictionary.")
-#        if 'path' not in file or 'content' not in file:
-#            logging.error(f"Each file dictionary must contain 'path' and 'content' keys. Keys found: {file.keys()}")
-#            raise ValueError("Each file dictionary must contain 'path' and 'content' keys.")
-#        if not isinstance(file['path'], str) or not isinstance(file['content'], str):
-#            logging.error(f"'path' and 'content' must be strings. Types found: path: {type(file['path'])}, content: {type(file['content'])}")
-#            raise ValueError("'path' and 'content' must be strings.")
-#
-#    return files
-
-
-
-    # Add more tests for other functions as needed
+# Add more tests for other functions as needed
 
 if __name__ == "__main__":
     try:
